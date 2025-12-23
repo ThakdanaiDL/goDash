@@ -22,7 +22,7 @@
             <div class="flex gap-2">
                 <input type="text" id="msgInput" placeholder="พิมพ์ข้อความที่ต้องการส่ง..." 
                     class="flex-1 border border-slate-300 p-2.5 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all">
-                <button onclick="sendMessage()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-lg font-semibold transition-colors">
+                <button id="sendBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-lg font-semibold transition-colors">
                     ส่งข้อความ
                 </button>
             </div>
@@ -31,7 +31,7 @@
         <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
             <div class="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
                 <h2 class="font-semibold text-slate-700">ประวัติในฐานข้อมูล (Supabase)</h2>
-                <button onclick="loadHistory()" class="text-sm bg-white border border-slate-300 px-3 py-1.5 rounded-md hover:bg-slate-100 transition-colors">
+                <button id="refreshBtn" class="text-sm bg-white border border-slate-300 px-3 py-1.5 rounded-md hover:bg-slate-100 transition-colors">
                     🔄 รีเฟรช
                 </button>
             </div>
@@ -46,7 +46,7 @@
                         </tr>
                     </thead>
                     <tbody id="historyBody" class="divide-y divide-slate-100">
-                        </tbody>
+                    </tbody>
                 </table>
             </div>
         </div>
@@ -67,32 +67,6 @@
             }
         }
 
-        // ดึงข้อมูลประวัติ
-        async function loadHistory() {
-            try {
-                const res = await fetch(`${API_BASE}/history`);
-                const data = await res.json();
-                const body = document.getElementById('historyBody');
-                body.innerHTML = '';
-
-                data.forEach(item => {
-                    body.innerHTML += `
-                        <tr class="hover:bg-slate-50 transition-colors text-slate-700">
-                            <td class="p-4 font-mono text-sm text-slate-400">#${item.ID}</td>
-                            <td class="p-4 font-medium">${item.content}</td>
-                            <td class="p-4">
-                                <span class="px-2 py-1 bg-blue-50 text-blue-600 rounded text-xs font-semibold uppercase tracking-wider">${item.status}</span>
-                            </td>
-                            <td class="p-4 text-right">
-                                <button onclick="updateLog(${item.ID}, '${item.content}')" class="text-amber-600 hover:text-amber-800 font-medium text-sm mr-4">แก้ไข</button>
-                                <button onclick="deleteLog(${item.ID})" class="text-red-500 hover:text-red-700 font-medium text-sm">ลบ</button>
-                            </td>
-                        </tr>
-                    `;
-                });
-            } catch (err) { console.error("Error loading data"); }
-        }
-
         // ส่งข้อความ
         async function sendMessage() {
             const input = document.getElementById('msgInput');
@@ -105,15 +79,6 @@
             }
         }
 
-        // แก้ไขข้อความ (UPDATE)
-        async function updateLog(id, oldContent) {
-            const newContent = prompt("แก้ไขข้อความเป็น:", oldContent);
-            if (newContent && newContent !== oldContent) {
-                const res = await fetch(`${API_BASE}/update?id=${id}&msg=${encodeURIComponent(newContent)}`);
-                if (res.ok) loadHistory();
-            }
-        }
-
         // ลบข้อความ (DELETE)
         async function deleteLog(id) {
             if (confirm(`ต้องการลบรายการ ID #${id} ใช่หรือไม่?`)) {
@@ -121,6 +86,55 @@
                 if (res.ok) loadHistory();
             }
         }
+
+        // ดึงข้อมูลประวัติ
+        async function loadHistory() {
+            try {
+                const res = await fetch(`${API_BASE}/history`);
+                const data = await res.json();
+                const body = document.getElementById('historyBody');
+                body.innerHTML = '';
+
+                data.forEach(item => {
+                    const tr = document.createElement('tr');
+                    tr.className = "hover:bg-slate-50 transition-colors text-slate-700";
+
+                    tr.innerHTML = `
+                        <td class="p-4 font-mono text-sm text-slate-400">#${item.ID}</td>
+                        <td class="p-4 font-medium">${item.content}</td>
+                        <td class="p-4">
+                            <span class="px-2 py-1 bg-blue-50 text-blue-600 rounded text-xs font-semibold uppercase tracking-wider">${item.status}</span>
+                        </td>
+                        <td class="p-4 text-right">
+                            <button class="editBtn text-amber-600 hover:text-amber-800 font-medium text-sm mr-4">แก้ไข</button>
+                            <button class="deleteBtn text-red-500 hover:text-red-700 font-medium text-sm">ลบ</button>
+                        </td>
+                    `;
+                    body.appendChild(tr);
+
+                    // Bind edit event
+                    tr.querySelector('.editBtn').addEventListener('click', async () => {
+                        const newContent = prompt("แก้ไขข้อความเป็น:", item.content);
+                        if (newContent && newContent !== item.content) {
+                            const res = await fetch(`${API_BASE}/update?id=${item.ID}&msg=${encodeURIComponent(newContent)}`);
+                            if (res.ok) loadHistory();
+                            else alert("Update ล้มเหลว");
+                        }
+                    });
+
+                    // Bind delete event
+                    tr.querySelector('.deleteBtn').addEventListener('click', () => {
+                        deleteLog(item.ID);
+                    });
+                });
+            } catch (err) {
+                console.error("Error loading data", err);
+            }
+        }
+
+        // Bind button events
+        document.getElementById('sendBtn').addEventListener('click', sendMessage);
+        document.getElementById('refreshBtn').addEventListener('click', loadHistory);
 
         // เริ่มต้นทำงาน
         checkHealth();
