@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Go-Supabase Dashboard (Full CRUD)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 p-8">
+    <div class="max-w-4xl mx-auto">
+        <h1 class="text-3xl font-bold mb-6 text-gray-800">🚀 Message Dashboard</h1>
+
+        <div class="bg-white p-6 rounded-lg shadow-md mb-8">
+            <h2 class="text-xl font-semibold mb-4">ส่งข้อความใหม่</h2>
+            <div class="flex gap-2">
+                <input type="text" id="msgInput" placeholder="พิมพ์ข้อความที่นี่..." class="flex-1 border p-2 rounded">
+                <button onclick="sendMessage()" class="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700">ส่ง</button>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-md overflow-hidden">
+            <div class="p-4 bg-gray-50 border-b flex justify-between items-center">
+                <h2 class="text-xl font-semibold">ประวัติการส่งข้อความ</h2>
+                <button onclick="loadHistory()" class="text-blue-500 hover:underline">รีเฟรช</button>
+            </div>
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="bg-gray-100">
+                        <th class="p-3 border-b">ID</th>
+                        <th class="p-3 border-b">ข้อความ</th>
+                        <th class="p-3 border-b">สถานะ</th>
+                        <th class="p-3 border-b text-center">จัดการ</th>
+                    </tr>
+                </thead>
+                <tbody id="historyBody">
+                    </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = "https://goapi-uo2h.onrender.com";
+
+        // 1. READ: ดึงข้อมูล
+        async function loadHistory() {
+            try {
+                const res = await fetch(`${API_BASE}/history`);
+                const data = await res.json();
+                const body = document.getElementById('historyBody');
+                body.innerHTML = '';
+
+                data.forEach(item => {
+                    body.innerHTML += `
+                        <tr class="hover:bg-gray-50">
+                            <td class="p-3 border-b">${item.ID}</td>
+                            <td class="p-3 border-b font-medium">${item.content}</td>
+                            <td class="p-3 border-b">
+                                <span class="px-2 py-1 bg-green-100 text-green-700 rounded text-xs">${item.status}</span>
+                            </td>
+                            <td class="p-3 border-b text-center">
+                                <button onclick="editLog(${item.ID}, '${item.content}')" class="text-yellow-600 hover:text-yellow-800 mr-3">แก้ไข</button>
+                                <button onclick="deleteLog(${item.ID})" class="text-red-500 hover:text-red-700">ลบ</button>
+                            </td>
+                        </tr>
+                    `;
+                });
+            } catch (err) {
+                console.error("Fetch error:", err);
+            }
+        }
+
+        // 2. CREATE: ส่งข้อความ
+        async function sendMessage() {
+            const msg = document.getElementById('msgInput').value;
+            if(!msg) return alert("กรุณาพิมพ์ข้อความ");
+            
+            await fetch(`${API_BASE}/send?msg=${encodeURIComponent(msg)}`);
+            document.getElementById('msgInput').value = '';
+            loadHistory();
+        }
+
+        // 3. UPDATE: แก้ไขข้อความ
+        async function editLog(id, oldMsg) {
+            const newMsg = prompt("แก้ไขข้อความของคุณ:", oldMsg);
+            
+            // ถ้ากดยกเลิก หรือไม่พิมพ์อะไรเลย ให้ข้าม
+            if (newMsg === null || newMsg === oldMsg) return;
+            if (newMsg.trim() === "") return alert("ข้อความต้องไม่ว่างเปล่า");
+
+            try {
+                const res = await fetch(`${API_BASE}/update?id=${id}&msg=${encodeURIComponent(newMsg)}`);
+                if (res.ok) {
+                    alert("อัปเดตเรียบร้อย!");
+                    loadHistory();
+                } else {
+                    alert("เกิดข้อผิดพลาดในการอัปเดต");
+                }
+            } catch (err) {
+                alert("เชื่อมต่อ API ไม่สำเร็จ");
+            }
+        }
+
+        // 4. DELETE: ลบข้อมูล
+        async function deleteLog(id) {
+            if(confirm('ยืนยันการลบ ID: ' + id)) {
+                await fetch(`${API_BASE}/delete?id=${id}`);
+                loadHistory();
+            }
+        }
+
+        loadHistory();
+    </script>
+</body>
+</html>
