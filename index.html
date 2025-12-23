@@ -1,13 +1,19 @@
 <!DOCTYPE html>
 <html lang="th">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Go API Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
-    <style>body { font-family: 'Inter', sans-serif; }</style>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+    </style>
 </head>
+
 <body class="bg-slate-50 p-4 md:p-8">
     <div class="max-w-5xl mx-auto">
         <header class="flex justify-between items-center mb-8">
@@ -20,9 +26,10 @@
         <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 mb-8">
             <label class="block text-sm font-semibold text-slate-700 mb-2">ส่งข้อความใหม่เข้า Discord</label>
             <div class="flex gap-2">
-                <input type="text" id="msgInput" placeholder="พิมพ์ข้อความที่ต้องการส่ง..." 
+                <input type="text" id="msgInput" placeholder="พิมพ์ข้อความที่ต้องการส่ง..."
                     class="flex-1 border border-slate-300 p-2.5 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all">
-                <button id="sendBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-lg font-semibold transition-colors">
+                <button id="sendBtn"
+                    class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-lg font-semibold transition-colors">
                     ส่งข้อความ
                 </button>
             </div>
@@ -31,7 +38,8 @@
         <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
             <div class="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
                 <h2 class="font-semibold text-slate-700">ประวัติในฐานข้อมูล (Supabase)</h2>
-                <button id="refreshBtn" class="text-sm bg-white border border-slate-300 px-3 py-1.5 rounded-md hover:bg-slate-100 transition-colors">
+                <button id="refreshBtn"
+                    class="text-sm bg-white border border-slate-300 px-3 py-1.5 rounded-md hover:bg-slate-100 transition-colors">
                     🔄 รีเฟรช
                 </button>
             </div>
@@ -70,8 +78,8 @@
         // ส่งข้อความ
         async function sendMessage() {
             const input = document.getElementById('msgInput');
-            if(!input.value) return alert("กรุณากรอกข้อความ");
-            
+            if (!input.value) return alert("กรุณากรอกข้อความ");
+
             const res = await fetch(`${API_BASE}/send?msg=${encodeURIComponent(input.value)}`);
             if (res.ok) {
                 input.value = '';
@@ -140,5 +148,41 @@
         checkHealth();
         loadHistory();
     </script>
+
+
+    <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+
+    <script>
+        const client = mqtt.connect("wss://mqtt.mdbiot.com:1883", {
+            // username: "user",
+            // password: "pass"
+        });
+
+        client.on("connect", () => {
+            console.log("MQTT Connected");
+
+            // subscribe subtopics
+            client.subscribe("#");
+        });
+
+        client.on("message", (topic, payload) => {
+            const msg = payload.toString();
+
+            // append log to UI
+            const div = document.getElementById("mqttLog");
+            div.innerHTML += `
+        <div class="border p-2 my-1 rounded bg-slate-100">
+            <div><strong>${topic}</strong></div>
+            <div>${msg}</div>
+        </div>
+    `;
+        });
+    </script>
+
+    <div id="mqttLog" class="p-4"></div>
+
+
+
 </body>
+
 </html>
